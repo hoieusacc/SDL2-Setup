@@ -1,7 +1,7 @@
 TARGET = main.exe
 
 all:
-	g++ -Isrc/Include -Lsrc/lib -o $(TARGET) main.cpp -lmingw32 -lSDL2main -lSDL2 -lSDL2_image
+	g++ -Isrc/Include -Lsrc/lib -o $(TARGET) main.cpp -lmingw32 -lSDL2main -lSDL2
 	$(TARGET) run
 
 run $(TARGET):
