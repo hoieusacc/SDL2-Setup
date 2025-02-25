@@ -1,116 +1,158 @@
+// sử dung SDL và IO cơ bả
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #include <iostream>
-#include <cmath>
 
-#define MAX_VELOCITY 1000
-#define MIN_VELOCITY -1000
+using namespace std;
 
-struct Square {
-    float x, y;
-    float vx, vy;
-    float size;
-    bool isJumping;
+//kích thước cố định của cửa sổ
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 750;
+
+// enum là kiểu dữ liệu lưu trữ các biến có giá trị cố định
+// lưu trữ các phím nhấn
+enum KeyPress {
+    KEY_PRESS_DEFAULT,
+    KEY_PRESS_UP,
+    KEY_PRESS_DOWN,
+    KEY_PRESS_RIGHT,
+    KEY_PRESS_LEFT,
+    KEY_PRESS_TOTAL
 };
 
-void handleInput(Square &square, float deltaTime) {
-    const Uint8* state = SDL_GetKeyboardState(NULL);
-    if (state[SDL_SCANCODE_LEFT]) {
-        square.vx -= 200 * deltaTime;
-        if (square.vx < MIN_VELOCITY){
-            square.vx = MIN_VELOCITY;
+// khởi tạo cửa sổ
+SDL_Window *window = NULL;
+
+// tạo bề mặt cửa sổ
+SDL_Surface *ScreenSurface = NULL;
+
+// hình ảnh tương ứng với phím bấm
+SDL_Surface *KeyPressSurface[KEY_PRESS_TOTAL];
+
+// bề mặt cửa sổ hiện tại
+SDL_Surface *CurrentSurface = NULL;
+
+//khởi động SDL và tạo cửa sổ
+bool init() {
+    bool success = true;
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        cout << "SDL could not initalized %s\n" << SDL_GetError() << endl;
+        success = false;
+    } else {
+        window = SDL_CreateWindow("Nguyen Minh Duc", SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH,SCREEN_HEIGHT,SDL_WINDOW_SHOWN);
+        if (window == NULL) {
+            cout << "Window could not initalized %s\n" << SDL_GetError() << endl;
+            success = false;
+        } else {
+            ScreenSurface = SDL_GetWindowSurface(window);
         }
     }
-    if (state[SDL_SCANCODE_RIGHT]) {
-        square.vx += 200 * deltaTime;
-        if (square.vx > MAX_VELOCITY){
-            square.vx = MAX_VELOCITY;
-        }
-    }
-    if (state[SDL_SCANCODE_UP] && !square.isJumping) {
-        square.vy = -300; 
-        square.isJumping = true;
-    }
+
+    return success;
 }
 
-int main(int argc, char* argv[]) {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        std::cerr << "SDL could not initialize! SDL_Error: " << SDL_GetError() << std::endl;
-        return -1;
+// tải hình ảnh bề mặt
+SDL_Surface *loadSurface(string path) {
+    SDL_Surface *loadedSurface = IMG_Load(path.c_str());
+    if (loadedSurface == NULL) {
+        cout << "Unable to load " << "SDL_ERROR:" << IMG_GetError() << endl;
+    }
+    return loadedSurface;
+}
+
+
+// hàm tải ảnh mặc định, trái, phải, trên, dưới
+bool loadMedia() {
+    bool success = true;
+    // tải hình ảnh mặc định (giao diện chính)
+    KeyPressSurface[KEY_PRESS_DEFAULT] = loadSurface("1de.JPG");
+    if ( KeyPressSurface[KEY_PRESS_DEFAULT] == NULL) {
+        cout << "Failed to load default image" << endl;
+        success = false;
+    }
+    KeyPressSurface[KEY_PRESS_UP] = loadSurface("1de.JPG");
+    if ( KeyPressSurface[KEY_PRESS_UP] == NULL) {
+        cout << "Failed to load default image" << endl;
+        success = false;
+    }
+    KeyPressSurface[KEY_PRESS_DOWN] = loadSurface("1de.JPG");
+    if ( KeyPressSurface[KEY_PRESS_DOWN] == NULL) {
+        cout << "Failed to load default image" << endl;
+        success = false;
+    }
+    KeyPressSurface[KEY_PRESS_RIGHT] = loadSurface("1de.JPG");
+    if ( KeyPressSurface[KEY_PRESS_RIGHT] == NULL) {
+        cout << "Failed to load default image" << endl;
+        success = false;
+    }
+    KeyPressSurface[KEY_PRESS_LEFT]= loadSurface("1de.JPG");
+    if ( KeyPressSurface[KEY_PRESS_LEFT] == NULL) {
+        cout << "Failed to load default image" << endl;
+        success = false;
+    }
+     
+    return success;
+} 
+
+void close() {
+    for (int i = 0; i < KEY_PRESS_TOTAL; i = i+1) {
+        SDL_FreeSurface(KeyPressSurface[i]);
+        KeyPressSurface[i] = NULL;
     }
 
-    SDL_Window* window = SDL_CreateWindow("Gravity Square", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 800, 600, SDL_WINDOW_SHOWN);
-    if (!window) {
-        std::cerr << "Window could not be created! SDL_Error: " << SDL_GetError() << std::endl;
-        SDL_Quit();
-        return -1;
-    }
+    SDL_DestroyWindow(window);
+    window = NULL;
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    if (!renderer) {
-        std::cerr << "Renderer could not be created! SDL_Error: " << SDL_GetError() << std::endl;
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return -1;
-    }
+    SDL_Quit();
+}
 
-    Square square = { 400, 300, 0, 0, 50, 0 };
-    const float gravity = 500.0f;
-    Uint32 lastTime = SDL_GetTicks();
-
-    bool quit = false;
-    SDL_Event e;
-    while (!quit) {
-        while (SDL_PollEvent(&e) != 0) {
-            if (e.type == SDL_QUIT) {
-                quit = true;
+int main(int argv, char *argc[]) {
+    if (init() == false) {
+        cout << "Unable to start" << endl;
+    } else {
+        if (loadMedia() == false) {
+            cout << "unable to start" << endl;
+        } else {
+            bool quit = false;
+            SDL_Event e;
+            CurrentSurface = KeyPressSurface[KEY_PRESS_DEFAULT];
+            //khi người dùng khởi động cửa sổ
+            while (quit == false) {
+                // khi các yêu cầu người dùng khác với mặc định dựa vào kho lữu trữ sự kiện
+                while (SDL_PollEvent(&e) != 0) {
+                    if (e.type == SDL_QUIT) {
+                        quit = true;
+                        // xử lí sự kiện phím bấm
+                    } else if (e.type == SDL_KEYDOWN) {
+                        switch (e.key.keysym.sym) {
+                            case SDLK_UP:
+                                CurrentSurface = KeyPressSurface[KEY_PRESS_UP];
+                                break;
+                            case SDLK_DOWN:
+                                CurrentSurface = KeyPressSurface[KEY_PRESS_DOWN];
+                                break;
+                            case SDLK_RIGHT:
+                                CurrentSurface = KeyPressSurface[KEY_PRESS_RIGHT];
+                                break;
+                            case SDLK_LEFT:
+                                CurrentSurface = KeyPressSurface[KEY_PRESS_LEFT];
+                                break;
+                            default:
+                                CurrentSurface = KeyPressSurface[KEY_PRESS_DEFAULT];
+                                break;
+                        }
+                    }
+                }
+                // Sau khi xử lí xong các yêu cầu từ người dùng thì đẩy hình ảnh lên màn hình
+                SDL_BlitSurface(CurrentSurface, NULL, ScreenSurface, NULL);
+                // Cập nhật lên cửa sổ
+                SDL_UpdateWindowSurface(window);
             }
         }
-
-        Uint32 currentTime = SDL_GetTicks();
-        float deltaTime = (currentTime - lastTime) / 1000.0f;
-        lastTime = currentTime;
-
-        handleInput(square, deltaTime);
-
-        square.vy += gravity * deltaTime;
-
-        square.x += square.vx * deltaTime;
-        square.y += square.vy * deltaTime;
-
-        if (square.y + square.size > 600) {
-            square.y = 600 - square.size;
-            square.vy = 0;
-            square.isJumping = false;
-        }
-
-        if (square.x < 0) {
-            square.x = 0;
-            square.vx = 0;
-        }
-        if (square.x + square.size > 800) {
-            square.x = 800 - square.size;
-            square.vx = 0;
-        }
-        if (square.y < 0) {
-            square.y = 0;
-            square.vy = 0;
-        }
-
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderClear(renderer);
-
-
-        SDL_Rect rect = { static_cast<int>(square.x), static_cast<int>(square.y), static_cast<int>(square.size), static_cast<int>(square.size) };
-        SDL_Point center = { static_cast<int>(square.size / 2), static_cast<int>(square.size / 2) };
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderFillRect(renderer, &rect);
-
-        SDL_RenderPresent(renderer);
     }
-
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-
+    
+    close();
     return 0;
-}
+} 
+
+// Nguyễn Minh Đức
