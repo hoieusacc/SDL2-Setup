@@ -47,7 +47,7 @@ If you don't have you can download it here:
 
     mingw32-make
 
-**Or you can change it to whatever you want by change the mingw32-make.exe name which located in "msys64/ucrt64/mingw32-make.exe". Recommended change it to make. So you can run my project with this command:**
+**Or you can change it to whatever you want by change the mingw32-make.exe name which located in "msys64/ucrt64/bin/mingw32-make.exe". Recommended change it to make. So you can run my project with this command:**
 
     make
     
